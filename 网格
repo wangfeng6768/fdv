@@ -1,0 +1,43 @@
+import ccxt
+
+# 设置交易所和交易对
+exchange = ccxt.binance()  # 使用Binance交易所
+symbol = 'BTC/USDT'  # 交易对为比特币对美元
+
+# 设置网格交易参数
+grid_levels = 10  # 网格层数
+grid_size = 0.01  # 网格大小
+buy_amount = 0.1  # 每个网格的买入数量
+
+# 获取当前比特币价格
+ticker = exchange.fetch_ticker(symbol)
+current_price = ticker['last']
+
+# 计算网格价格
+grid_prices = []
+for i in range(grid_levels):
+    price = current_price * (1 - grid_size * (i + 1))
+    grid_prices.append(price)
+
+# 执行网格交易策略
+for price in grid_prices:
+    # 计算买入数量
+    quantity = buy_amount / price
+
+    # 下单买入
+    order = exchange.create_limit_buy_order(symbol, quantity, price)
+    print(f"下单买入：价格 {price}, 数量 {quantity}, 订单ID {order['id']}")
+
+# 获取当前持仓
+positions = exchange.fetch_open_orders(symbol)
+for position in positions:
+    # 撤销未成交的订单
+    exchange.cancel_order(position['id'])
+    print(f"撤销订单：订单ID {position['id']}")
+
+# 清空持仓
+balances = exchange.fetch_balance()
+if symbol in balances['total']:
+    quantity = balances['total'][symbol]
+    order = exchange.create_market_sell_order(symbol, quantity)
+    print(f"清空持仓：数量 {quantity}, 订单ID {order['id']}")
